@@ -1,0 +1,8 @@
+include README.md
+include LICENSE
+include requirements.txt
+graft classroom_utils
+recursive-exclude * *.py[co]
+include versioneer.py
+include classroom_utils/_version.py
+include classroom_utils/resources/*.txt
