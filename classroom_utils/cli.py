@@ -97,6 +97,9 @@ class GithubSubCommand(ClassroomUtilsBaseCommand):
     def get_org_name(self, args: argparse.Namespace) -> str:
         return args.org_name if args.org_name else dialogs.user_input_request_org_name(self.github_ops)
 
+    def get_repo_name(self, args: argparse.Namespace) -> str:
+        return args.repo if args.repo else dialogs.user_input_request_repo_name(self.github_ops)
+
     def get_permission(self, args: argparse.Namespace) -> str:
         return args.permission if args.permission else dialogs.user_input_request_repo_permission()
 
@@ -105,7 +108,7 @@ class GithubSubCommand(ClassroomUtilsBaseCommand):
         logging.info("github:")
 
 
-class GithubCheckClassSubCommand(GithubSubCommand):
+class GithubClassCheckSubCommand(GithubSubCommand):
 
     def __init__(self, parser):
         super().__init__(parser)
@@ -116,7 +119,9 @@ class GithubCheckClassSubCommand(GithubSubCommand):
         class_name = self.get_class_name(args)
 
         logging.info("github check class:")
-        logging.info("\tclass_name=%s", class_name)
+        logging.info("\t-class_name=%s", class_name)
+
+        self.github_ops.class_check(class_name)
 
 
 class GithubOrgSubCommand(GithubSubCommand):
@@ -130,7 +135,7 @@ class GithubOrgSubCommand(GithubSubCommand):
         org_name = self.get_org_name(args)
 
         logging.info("github org:")
-        logging.info("\torg_name=%s", org_name)
+        logging.info("\t-org_name=%s", org_name)
 
 
 class GithubOrgInitSubCommand(GithubOrgSubCommand):
@@ -159,10 +164,12 @@ class GithubOrgInitSubCommand(GithubOrgSubCommand):
         template = args.template
 
         logging.info(f"github org init:")
-        logging.info("\torg_name=%s", org_name)
-        logging.info("\tclass_name=%s", class_name)
-        logging.info("\trepo_prefix=%s", repo_prefix)
-        logging.info("\ttemplate=%s", template)
+        logging.info("\t-org_name=%s", org_name)
+        logging.info("\t-class_name=%s", class_name)
+        logging.info("\t-repo_prefix=%s", repo_prefix)
+        logging.info("\t-template=%s", template)
+
+        self.github_ops.create_personal_class_repos_in_org(org_name, class_name, repo_prefix, template)
 
 
 class GithubOrgAccessSubCommand(GithubOrgSubCommand):
@@ -174,7 +181,7 @@ class GithubOrgAccessSubCommand(GithubOrgSubCommand):
         org_name = self.get_org_name(args)
 
         logging.info(f"github org access:")
-        logging.info("\torg_name=%s", org_name)
+        logging.info("\t-org_name=%s", org_name)
 
 
 class GithubOrgAccessGrantSubCommand(GithubOrgInitSubCommand):
@@ -196,21 +203,27 @@ class GithubOrgAccessGrantSubCommand(GithubOrgInitSubCommand):
         permission = self.get_permission(args)
 
         logging.info(f"github org access grant:")
-        logging.info("\torg_name=%s", org_name)
-        logging.info("\tclass_name=%s", class_name)
-        logging.info("\tpermission=%s", permission)
+        logging.info("\t-org_name=%s", org_name)
+        logging.info("\t-class_name=%s", class_name)
+        logging.info("\t-permission=%s", permission)
+
+        self.github_ops.grant_access_to_personal_class_repos_in_org(org_name, class_name, permission)
 
 
-class GithubOrgAccessRevokeSubCommand(GithubOrgSubCommand):
+class GithubOrgAccessRevokeSubCommand(GithubOrgInitSubCommand):
     def __init__(self, parser):
         super().__init__(parser)
 
     def handle(self, args: argparse.Namespace) -> None:
         super().prepare_handler(args)
         org_name = self.get_org_name(args)
+        class_name = self.get_class_name(args)
 
         logging.info(f"github org access grant:")
-        logging.info("\torg_name=%s", org_name)
+        logging.info("\t-org_name=%s", org_name)
+        logging.info("\t-class_name=%s", class_name)
+
+        self.github_ops.revoke_access_from_personal_class_repos_in_org(org_name, class_name)
 
 
 class GithubOrgReviewCreateSubCommand(GithubOrgSubCommand):
@@ -233,13 +246,17 @@ class GithubOrgReviewCreateSubCommand(GithubOrgSubCommand):
     def handle(self, args: argparse.Namespace) -> None:
         super().prepare_handler(args)
         org_name = self.get_org_name(args)
+        class_name = self.get_class_name(args)
         head_branch_name = args.head_branch
-        review_branch = args.review_branch
+        review_branch_name = args.review_branch
 
         logging.info(f"github org review create:")
         logging.info("\torg_name=%s", org_name)
+        logging.info("\tclass_name=%s", class_name)
         logging.info("\thead_branch=%s", head_branch_name)
-        logging.info("\treview_branch=%s", review_branch)
+        logging.info("\treview_branch=%s", review_branch_name)
+
+        self.github_ops.create_reviews_for_repos_in_org(org_name, class_name, head_branch_name, review_branch_name)
 
 
 class GithubOrgReviewStatusSubCommand(GithubOrgSubCommand):
@@ -252,3 +269,68 @@ class GithubOrgReviewStatusSubCommand(GithubOrgSubCommand):
 
         logging.info(f"github org review status:")
         logging.info("\torg_name=%s", org_name)
+
+
+class GithubRepoSubCommand(GithubSubCommand):
+    def __init__(self, parser):
+        super().__init__(parser)
+
+        self.parser.add_argument('--class-name', type=str, default=None, help="Class name")
+        self.parser.add_argument(
+            "--repo",
+            help="Name of the repository.",
+            type=str,
+            default=None
+        )
+
+    def handle(self, args: argparse.Namespace) -> None:
+        super().prepare_handler(args)
+        repo_name = self.get_repo_name(args)
+
+        logging.info(f"github org review status:")
+        logging.info("\t-repo_name=%s", repo_name)
+
+        self.github_ops.repo_print_details(repo_name)
+
+
+class GithubRepoAccessGrantSubCommand(GithubRepoSubCommand):
+    def __init__(self, parser):
+        super().__init__(parser)
+
+        self.parser.add_argument(
+            "--permission",
+            help="Permisison to grant (push or pull)",
+            type=str,
+            choices=["push", "pull"],
+            default=None
+        )
+
+    def handle(self, args: argparse.Namespace) -> None:
+        super().prepare_handler(args)
+        repo_name = self.get_repo_name(args)
+        class_name = self.get_class_name(args)
+        permission = self.get_permission(args)
+
+        logging.info(f"github org review status:")
+        logging.info("\t-repo_name=%s", repo_name)
+        logging.info("\t-class_name=%s", class_name)
+        logging.info("\t-permission=%s", permission)
+
+        self.github_ops.grant_class_access_to_repo(repo_name, class_name, permission)
+
+
+class GithubRepoAccessRevokeSubCommand(GithubRepoSubCommand):
+    def __init__(self, parser):
+        super().__init__(parser)
+
+    def handle(self, args: argparse.Namespace) -> None:
+        super().prepare_handler(args)
+        repo_name = self.get_repo_name(args)
+        class_name = self.get_class_name(args)
+
+        logging.info(f"github org review status:")
+        logging.info("\t-repo_name=%s", repo_name)
+        logging.info("\t-class_name=%s", class_name)
+
+        self.github_ops.revoke_class_access_from_repo(repo_name, class_name)
+

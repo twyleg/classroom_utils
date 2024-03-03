@@ -1,6 +1,8 @@
 # Copyright (C) 2024 twyleg
 import logging
 import json
+import os
+
 import jsonschema
 
 from typing import List, Optional, Dict, Iterator
@@ -10,10 +12,11 @@ from github.PaginatedList import PaginatedList
 from github.Repository import Repository
 
 
-CLASSROOM_UTILS_CONFIG_FILE_SEARCHPATHS = [
+CLASSROOM_UTILS_CONFIG_FILE_SEARCH_PATHS = [
     Path.cwd() / "classroom_utils.json",
     Path.cwd().parent / "classroom_utils.json"
 ]
+CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME = "CLASSROOM_UTILS_CONFIG"
 
 FILE_DIR = Path(__file__).parent
 CLASSROOM_UTILS_CONFIG_FILE_SCHEMA = FILE_DIR / "resources/schemas/classroom_utils_schema.json"
@@ -76,14 +79,30 @@ class Class:
 
 
 def find_classroom_utils_config_file() -> Path:
-    for searchpath in CLASSROOM_UTILS_CONFIG_FILE_SEARCHPATHS:
-        logging.debug("Checking path: %s", searchpath)
-        if searchpath.exists():
+    logging.debug("Searching classroom_utils config file")
+
+    logging.debug("Checking %d search paths:", len(CLASSROOM_UTILS_CONFIG_FILE_SEARCH_PATHS))
+    for search_path in CLASSROOM_UTILS_CONFIG_FILE_SEARCH_PATHS:
+        logging.debug("Checking path: %s", search_path)
+        if search_path.exists():
             logging.debug("Config file found!")
-            return searchpath
+            return search_path
         else:
             logging.debug("Config file not found!")
-    raise FileNotFoundError(f"Unable to find config file in any of the given searchpaths: {CLASSROOM_UTILS_CONFIG_FILE_SEARCHPATHS}")
+
+    logging.debug("Checking environment variable '%s':", CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME)
+    if CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME in os.environ:
+        config_file_path = Path(os.environ[CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME])
+        logging.debug("Checking path: %s", config_file_path)
+        if config_file_path.exists():
+            logging.debug("Config file found!")
+            return config_file_path
+        else:
+            logging.debug("Config file not found!")
+    else:
+        logging.debug("Environment variable '%s' not provided", CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME)
+
+    raise FileNotFoundError(f"Unable to find config file in any of the given search paths ({CLASSROOM_UTILS_CONFIG_FILE_SEARCH_PATHS}) or the environment variable ({CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME})")
 
 
 def validate_classroom_utils_config_file(classroom_utils_config_filepath: Path) -> bool:

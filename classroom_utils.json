@@ -1,6 +1,6 @@
 {
   "classes": {
-    "test_class_a": {
+    "example_class_a": {
       "moderators": [
         { "name": "Wylegala", "surname": "Torsten", "github_username": "twyleg" },
         { "name": "Sad", "surname": "Marvin", "github_username": "sad-marvin" }
@@ -10,7 +10,7 @@
         { "name": "Musterazubine", "surname": "Mia", "github_username": "mia-musterazubine-vw" }
       ]
     },
-    "test_class_b": {
+    "example_class_b": {
       "moderators": [
         { "name": "Wylegala", "surname": "Torsten", "github_username": "twyleg" },
         { "name": "Sad", "surname": "Marvin", "github_username": "sad-marvin" }

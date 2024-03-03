@@ -124,6 +124,11 @@ class GithubOperations:
             org_names.sort()
             return org_names
 
+    def get_full_repo_names_by_org(self, org_name: str) -> List[str]:
+        org = self.get_org(org_name)
+        repos = org.get_repos(sort="full_name")
+        return [repo.full_name for repo in repos]
+
     def get_repo(self, full_repo_name: str) -> github.Repository.Repository:
         return self.github_connection.get_repo(full_repo_name)
 
@@ -142,7 +147,7 @@ class GithubOperations:
         return None
 
     @staticmethod
-    def remove_invitation(repo: github.Repository.Repository, invitee: github.NamedUser.NamedUser):
+    def remove_invitation(repo: github.Repository.Repository, invitee: github.NamedUser.NamedUser) -> None:
         logging.debug("Removing invitations in repo '%s' for user '%s'", repo.full_name, invitee.login)
         for invitation in repo.get_pending_invitations():
             logging.debug("  - Found invitation: '%s'", invitation.invitee.login)
@@ -158,7 +163,7 @@ class GithubOperations:
         os.environ["GIT_PASSWORD"] = self.github_credentials.token
         git.Repo.clone_from(clone_url, target_dir)
 
-    def validate_class(self, class_name: str):
+    def class_check(self, class_name: str) -> None:
         logging.info("Validating class '%s'", class_name)
 
         class_to_validate = get_class_by_name(class_name)
@@ -167,7 +172,7 @@ class GithubOperations:
         logging.info("Members:")
         self.validate_users(class_to_validate.members)
 
-    def create_personal_class_repos_in_org(self, org_name: str, class_name: str, repo_prefix: str, template_repo_full_name: str):
+    def create_personal_class_repos_in_org(self, org_name: str, class_name: str, repo_prefix: str, template_repo_full_name: str) -> None:
         logging.info("Create class repos in org '%s' for class '%s'", org_name, class_name)
 
         selected_class = get_class_by_name(class_name)
@@ -192,7 +197,7 @@ class GithubOperations:
         for class_member in selected_class.inactive_members:
             logging.info("Skipping repo creation of '%s' due to inactivity of class member", class_member.fullname)
 
-    def create_reviews_for_repos_in_org(self, org_name: str, class_name: str, head_branch_name: str, review_branch_name: str):
+    def create_reviews_for_repos_in_org(self, org_name: str, class_name: str, head_branch_name: str, review_branch_name: str) -> None:
 
         logging.info("Create reviews in '%s' for class '%s'", org_name, class_name)
 
@@ -244,7 +249,7 @@ class GithubOperations:
             except github.GithubException as e:
                 logging.error("Create pullrequest failed with message: '$s'", e.message)
 
-    def grant_access_to_personal_class_repos_in_org(self, org_name: str, class_name: str, permission: str):
+    def grant_access_to_personal_class_repos_in_org(self, org_name: str, class_name: str, permission: str) -> None:
         logging.info("Grant access to personal class repos in org '%s' for class '%s'", org_name, class_name)
 
         selected_class = get_class_by_name(class_name)
@@ -260,7 +265,7 @@ class GithubOperations:
             logging.info("Granted access to personal class repo for '%s' -> '%s, permission: '%s'", class_member, repo_name,
                          permission)
 
-    def revoke_access_from_personal_class_repos_in_org(self, org_name: str, class_name: str):
+    def revoke_access_from_personal_class_repos_in_org(self, org_name: str, class_name: str) -> None:
         logging.info("Revoke access from personal class repos in org '%s' for class '%s'", org_name, class_name)
 
         selected_class = get_class_by_name(class_name)
@@ -281,7 +286,7 @@ class GithubOperations:
                 logging.error("%s", e)
                 logging.error("Unable to revoke access for '%s'", repo_name)
 
-    def grant_class_access_to_repo(self, full_repo_name: str, class_name: str, permission: str):
+    def grant_class_access_to_repo(self, full_repo_name: str, class_name: str, permission: str) -> None:
         logging.info("Grant class '%s' access to repo '%s' with permission '%s'", class_name, full_repo_name, permission)
 
         selected_class = get_class_by_name(class_name)
@@ -294,7 +299,7 @@ class GithubOperations:
             repo.add_to_collaborators(class_member_named_user, permission=permission)
             logging.info("Invited successfully!")
 
-    def revoke_class_access_from_repo(self, full_repo_name: str, class_name: str):
+    def revoke_class_access_from_repo(self, full_repo_name: str, class_name: str) -> None:
         logging.info("Revoke class access from repo '%s' for class '%s'", full_repo_name, class_name)
 
         selected_class = get_class_by_name(class_name)
@@ -312,7 +317,7 @@ class GithubOperations:
                 logging.error("%s", e)
                 logging.error("Unable to revoke access from repo '%s' for user '%s'", repo.full_name, class_member)
 
-    def clone_org(self, org_name: str):
+    def clone_org(self, org_name: str) -> None:
         logging.info("Cloning all repos of org '%s'", org_name)
 
         backup_dir = Path.cwd() / org_name
@@ -326,3 +331,22 @@ class GithubOperations:
             logging.info("Cloning repo '%s' -> '%s'", repo.clone_url, backup_repo_dir)
             backup_repo_dir.mkdir()
             self.clone_repo(repo.clone_url, backup_repo_dir)
+
+    def repo_print_details(self, full_repo_name: str) -> None:
+        repo = self.get_repo(full_repo_name)
+
+        logging.info("Repository details '%s':", full_repo_name)
+        logging.info("  - Created: %s", repo.created_at)
+        logging.info("  - Modified: %s", repo.last_modified)
+
+        logging.info("  - Pending invitations:")
+        invitations = repo.get_pending_invitations()
+        for invitation in invitations:
+            logging.info("    - %s: %s", invitation.invitee.login, invitation.permissions)
+
+        logging.info("  - Collaborators:")
+        collaborators = repo.get_collaborators()
+        for collaborator in collaborators:
+            collaborator_permission = repo.get_collaborator_permission(collaborator)
+            logging.info("    - %s: %s", collaborator.login, collaborator_permission)
+

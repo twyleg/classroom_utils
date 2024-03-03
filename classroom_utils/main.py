@@ -11,8 +11,8 @@ def main() -> None:
     root_command.add_subcommand(command="local")
     root_command.add_subcommand(command="local mkdir", command_type=LocalClassMkdirSubCommand)
     root_command.add_subcommand(command="github", command_type=GithubSubCommand)
-    root_command.add_subcommand(command="github check")
-    root_command.add_subcommand(command="github check class", command_type=GithubCheckClassSubCommand)
+    root_command.add_subcommand(command="github class")
+    root_command.add_subcommand(command="github class check", command_type=GithubClassCheckSubCommand)
     root_command.add_subcommand(command="github org", command_type=GithubOrgSubCommand)
     root_command.add_subcommand(command="github org init", command_type=GithubOrgInitSubCommand)
     root_command.add_subcommand(command="github org access", command_type=GithubOrgAccessSubCommand)
@@ -21,6 +21,11 @@ def main() -> None:
     root_command.add_subcommand(command="github org review")
     root_command.add_subcommand(command="github org review create", command_type=GithubOrgReviewCreateSubCommand)
     root_command.add_subcommand(command="github org review status", command_type=GithubOrgReviewStatusSubCommand)
+    root_command.add_subcommand(command="github repo", command_type=GithubRepoSubCommand)
+    root_command.add_subcommand(command="github repo create")
+    root_command.add_subcommand(command="github repo access")
+    root_command.add_subcommand(command="github repo access grant", command_type=GithubRepoAccessGrantSubCommand)
+    root_command.add_subcommand(command="github repo access revoke", command_type=GithubRepoAccessRevokeSubCommand)
 
     args = root_command.parse()
 
@@ -32,7 +37,11 @@ def main() -> None:
     logging.debug("Arguments: %s", args)
     logging.debug("Command: %s", args.func.__name__)
 
-    args.func(args)
+    try:
+        args.func(args)
+    except KeyboardInterrupt:
+        print()
+        logging.info("Process aborted by user! Exiting...")
 
 
 if __name__ == "__main__":

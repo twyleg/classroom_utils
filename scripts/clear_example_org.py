@@ -11,11 +11,11 @@ from classroom_utils.github_operations import GithubCredentials
 FILE_DIR = Path(__file__).parent
 FORMAT = "[%(asctime)s][%(levelname)s][%(name)s]: %(message)s"
 
-TEST_ORG_NAME = "classroom-utils-test-org"
+EXAMPLE_ORG_NAME = "classroom-utils-example-org"
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(usage="clear_test_org [<args>]")
+    parser = argparse.ArgumentParser(usage="clear_example_org [<args>]")
     parser.add_argument(
         "-g",
         "--github-token",
@@ -45,10 +45,10 @@ if __name__ == "__main__":
     github_credentials = GithubCredentials.read_github_credentials(args)
     github_connection = github.Github(auth=github.Auth.Token(github_credentials.token))
 
-    org = github_connection.get_organization(TEST_ORG_NAME)
+    org = github_connection.get_organization(EXAMPLE_ORG_NAME)
     repos = org.get_repos()
 
-    logging.info("Clearing org: '%s'", org.name)
+    logging.info("Clearing example org: '%s'", org.name)
     for repo in repos:
         logging.info("  - %s", repo.full_name)
         repo.delete()
