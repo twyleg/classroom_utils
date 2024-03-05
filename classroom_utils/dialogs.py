@@ -4,7 +4,7 @@ import sys
 from typing import List
 
 from classroom_utils import github_operations
-from roles import read_classes_from_config
+from classroom_utils.roles import read_classes_from_config
 
 
 def print_numerized_dialog(title: str, choices: List[str]) -> str:

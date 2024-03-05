@@ -1,5 +1,5 @@
 # Copyright (C) 2024 twyleg
-from subcommands import RootCommand
+from classroom_utils.subcommands import RootCommand
 from classroom_utils.cli import *
 
 FORMAT = "[%(asctime)s][%(levelname)s][%(name)s]: %(message)s"
