@@ -13,8 +13,8 @@ from github.Repository import Repository
 
 
 CLASSROOM_UTILS_CONFIG_FILE_SEARCH_PATHS = [
-    Path.cwd() / "classroom_utils.json",
-    Path.cwd().parent / "classroom_utils.json"
+    Path.cwd() / "classroom_utils_config.json",
+    Path.cwd().parent / "classroom_utils_config.json"
 ]
 CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME = "CLASSROOM_UTILS_CONFIG"
 
@@ -78,6 +78,10 @@ class Class:
         return f"name='{self.name}', members='{str(self.members)}'"
 
 
+class ClassroomUtilsConfigNotFoundError(Exception):
+    pass
+
+
 def find_classroom_utils_config_file() -> Path:
     logging.debug("Searching classroom_utils config file")
 
@@ -102,7 +106,9 @@ def find_classroom_utils_config_file() -> Path:
     else:
         logging.debug("Environment variable '%s' not provided", CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME)
 
-    raise FileNotFoundError(f"Unable to find config file in any of the given search paths ({CLASSROOM_UTILS_CONFIG_FILE_SEARCH_PATHS}) or the environment variable ({CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME})")
+    raise ClassroomUtilsConfigNotFoundError(f"Unable to find config file in any of the given search paths "
+                                            f"({CLASSROOM_UTILS_CONFIG_FILE_SEARCH_PATHS}) or the environment variable "
+                                            f"({CLASSROOM_UTILS_CONFIG_FILE_ENVIRONMENT_VARIABLE_NAME})")
 
 
 def validate_classroom_utils_config_file(classroom_utils_config_filepath: Path) -> bool:
@@ -114,7 +120,11 @@ def validate_classroom_utils_config_file(classroom_utils_config_filepath: Path) 
             jsonschema.validate(instance=class_definition_dict, schema=json_schema)
 
 
-def read_classes_from_config(classroom_utils_config_filepath: Path = find_classroom_utils_config_file()) -> Dict[str, Class]:
+def read_classes_from_config(classroom_utils_config_filepath: Path | None = None) -> Dict[str, Class]:
+
+    if classroom_utils_config_filepath is None:
+        classroom_utils_config_filepath = find_classroom_utils_config_file()
+
     validate_classroom_utils_config_file(classroom_utils_config_filepath)
     with open(classroom_utils_config_filepath, encoding="utf-8") as classroom_utils_config_file:
         class_definition_dict = json.load(classroom_utils_config_file)
@@ -140,15 +150,19 @@ def read_classes_from_config(classroom_utils_config_filepath: Path = find_classr
         return classes
 
 
-def get_class_by_name(class_name: str, classes: Dict[str, Class] = read_classes_from_config()) -> Class:
-    class_ = classes[class_name]
+def get_class_by_name(class_name: str, classes: Dict[str, Class] | None = None) -> Class:
+
+    if classes is None:
+        classes = read_classes_from_config()
+
+    requsted_class = classes[class_name]
 
     logging.debug("Class: name='%s'", class_name)
     logging.debug("  members:")
-    for member in class_.members:
+    for member in requsted_class.members:
         logging.debug("    - Student: %s", member)
     logging.debug("  moderators:")
-    for moderator in class_.moderators:
+    for moderator in requsted_class.moderators:
         logging.debug("    - Moderator: %s", moderator)
 
     return classes[class_name]

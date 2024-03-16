@@ -1,4 +1,6 @@
 # Copyright (C) 2024 twyleg
+from classroom_utils.github_operations import GithubCredentials, GithubCredentialsNotFoundError
+from classroom_utils.roles import find_classroom_utils_config_file, ClassroomUtilsConfigNotFoundError
 from classroom_utils.subcommands import RootCommand
 from classroom_utils.cli import *
 
@@ -36,6 +38,13 @@ def main() -> None:
     logging.debug("Log level: %s", logging.getLevelName(log_level))
     logging.debug("Arguments: %s", args)
     logging.debug("Command: %s", args.func.__name__)
+
+    try:
+        GithubCredentials.read_github_credentials(args)
+        find_classroom_utils_config_file()
+    except (GithubCredentialsNotFoundError, ClassroomUtilsConfigNotFoundError) as e:
+        logging.error(e)
+        sys.exit(-1)
 
     try:
         args.func(args)
