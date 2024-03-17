@@ -21,7 +21,7 @@ from github.PaginatedList import PaginatedList
 
 from typing import List
 
-from classroom_utils.roles import GithubUser, get_class_by_name, find_personal_repo, generate_personal_repo_name
+from classroom_utils.roles import GithubUser, get_class_by_name, find_personal_repo, generate_personal_repo_name, Member
 
 
 class GithubCredentialsNotFoundError(Exception):
@@ -250,13 +250,13 @@ class GithubOperations:
             except github.GithubException as e:
                 logging.error("Create pullrequest failed with message: '$s'", e.message)
 
-    def grant_access_to_personal_class_repos_in_org(self, org_name: str, class_name: str, permission: str) -> None:
-        logging.info("Grant access to personal class repos in org '%s' for class '%s'", org_name, class_name)
+    def grant_access_to_personal_class_repos_in_org(self, org_name: str, selected_class_members: List[Member],
+                                                    permission: str) -> None:
+        logging.info("Grant access to personal class repos in org '%s' for the following class members:", org_name)
 
-        selected_class = get_class_by_name(class_name)
         org = self.get_org(org_name)
 
-        for class_member in selected_class.active_members:
+        for class_member in selected_class_members:
             repo_name = generate_personal_repo_name(class_member, "")
 
             class_member_named_user = self.get_named_user(class_member.github_username)
@@ -266,14 +266,12 @@ class GithubOperations:
             logging.info("Granted access to personal class repo for '%s' -> '%s, permission: '%s'", class_member, repo_name,
                          permission)
 
-    def revoke_access_from_personal_class_repos_in_org(self, org_name: str, class_name: str) -> None:
-        logging.info("Revoke access from personal class repos in org '%s' for class '%s'", org_name, class_name)
-
-        selected_class = get_class_by_name(class_name)
+    def revoke_access_from_personal_class_repos_in_org(self, org_name: str, selected_class_members: List[Member],) -> None:
+        logging.info("Revoke access from personal class repos in org '%s' for the following class members:'", org_name)
 
         org = self.get_org(org_name)
 
-        for class_member in selected_class.active_members:
+        for class_member in selected_class_members:
             repo_name = generate_personal_repo_name(class_member, "")
             class_member_named_user = self.get_named_user(class_member.github_username)
             try:
@@ -287,27 +285,24 @@ class GithubOperations:
                 logging.error("%s", e)
                 logging.error("Unable to revoke access for '%s'", repo_name)
 
-    def grant_class_access_to_repo(self, full_repo_name: str, class_name: str, permission: str) -> None:
-        logging.info("Grant class '%s' access to repo '%s' with permission '%s'", class_name, full_repo_name, permission)
-
-        selected_class = get_class_by_name(class_name)
+    def grant_class_access_to_repo(self, full_repo_name: str, selected_class_members: List[Member], permission: str) -> None:
+        logging.info("Grant class access to repo '%s' with permission '%s' for the following class members:",
+                     full_repo_name, permission)
 
         repo = self.get_repo(full_repo_name)
 
-        for class_member in selected_class.active_members:
+        for class_member in selected_class_members:
             class_member_named_user = self.get_named_user(class_member.github_username)
             logging.info("Inviting class member '%s' to repo '%s' with permission: '%s'", class_member, repo.full_name, permission)
             repo.add_to_collaborators(class_member_named_user, permission=permission)
             logging.info("Invited successfully!")
 
-    def revoke_class_access_from_repo(self, full_repo_name: str, class_name: str) -> None:
-        logging.info("Revoke class access from repo '%s' for class '%s'", full_repo_name, class_name)
-
-        selected_class = get_class_by_name(class_name)
+    def revoke_class_access_from_repo(self, full_repo_name: str, selected_class_members: List[Member],) -> None:
+        logging.info("Revoke class access from repo '%s' for the following class members.", full_repo_name)
 
         repo = self.get_repo(full_repo_name)
 
-        for class_member in selected_class.active_members:
+        for class_member in selected_class_members:
             class_member_named_user = self.get_named_user(class_member.github_username)
             try:
                 repo.remove_from_collaborators(class_member_named_user)

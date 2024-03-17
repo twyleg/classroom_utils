@@ -12,3 +12,4 @@ pytest-mock
 jsonschema
 PyGithub
 GitPython
+inquirerpy
