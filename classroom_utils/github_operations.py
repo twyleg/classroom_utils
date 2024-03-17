@@ -19,6 +19,8 @@ import git
 from github.Organization import Organization
 from github.PaginatedList import PaginatedList
 
+from alive_progress import alive_bar
+
 from typing import List
 
 from classroom_utils.roles import GithubUser, get_class_by_name, find_personal_repo, generate_personal_repo_name, Member
@@ -256,34 +258,38 @@ class GithubOperations:
 
         org = self.get_org(org_name)
 
-        for class_member in selected_class_members:
-            repo_name = generate_personal_repo_name(class_member, "")
+        with alive_bar(len(selected_class_members), title="Granting access:") as bar:
+            for class_member in selected_class_members:
+                repo_name = generate_personal_repo_name(class_member, "")
 
-            class_member_named_user = self.get_named_user(class_member.github_username)
+                class_member_named_user = self.get_named_user(class_member.github_username)
 
-            repo = org.get_repo(repo_name)
-            repo.add_to_collaborators(class_member_named_user, permission=permission)
-            logging.info("Granted access to personal class repo for '%s' -> '%s, permission: '%s'", class_member, repo_name,
-                         permission)
+                repo = org.get_repo(repo_name)
+                repo.add_to_collaborators(class_member_named_user, permission=permission)
+                logging.info("Granted access to personal class repo for '%s' -> '%s, permission: '%s'", class_member, repo_name,
+                             permission)
+                bar()
 
     def revoke_access_from_personal_class_repos_in_org(self, org_name: str, selected_class_members: List[Member],) -> None:
         logging.info("Revoke access from personal class repos in org '%s' for the following class members:'", org_name)
 
         org = self.get_org(org_name)
 
-        for class_member in selected_class_members:
-            repo_name = generate_personal_repo_name(class_member, "")
-            class_member_named_user = self.get_named_user(class_member.github_username)
-            try:
-                repo = org.get_repo(repo_name)
-                repo.remove_from_collaborators(class_member_named_user)
+        with alive_bar(len(selected_class_members), title="Revoking access:") as bar:
+            for class_member in selected_class_members:
+                repo_name = generate_personal_repo_name(class_member, "")
+                class_member_named_user = self.get_named_user(class_member.github_username)
+                try:
+                    repo = org.get_repo(repo_name)
+                    repo.remove_from_collaborators(class_member_named_user)
 
-                self.remove_invitation(repo, class_member_named_user)
+                    self.remove_invitation(repo, class_member_named_user)
 
-                logging.info("Revoked access from personal class repo '%s' for '%s'", repo.full_name, class_member)
-            except github.UnknownObjectException as e:
-                logging.error("%s", e)
-                logging.error("Unable to revoke access for '%s'", repo_name)
+                    logging.info("Revoked access from personal class repo '%s' for '%s'", repo.full_name, class_member)
+                except github.UnknownObjectException as e:
+                    logging.error("%s", e)
+                    logging.error("Unable to revoke access for '%s'", repo_name)
+                bar()
 
     def grant_class_access_to_repo(self, full_repo_name: str, selected_class_members: List[Member], permission: str) -> None:
         logging.info("Grant class access to repo '%s' with permission '%s' for the following class members:",
@@ -291,27 +297,31 @@ class GithubOperations:
 
         repo = self.get_repo(full_repo_name)
 
-        for class_member in selected_class_members:
-            class_member_named_user = self.get_named_user(class_member.github_username)
-            logging.info("Inviting class member '%s' to repo '%s' with permission: '%s'", class_member, repo.full_name, permission)
-            repo.add_to_collaborators(class_member_named_user, permission=permission)
-            logging.info("Invited successfully!")
+        with alive_bar(len(selected_class_members), title="Granting access:") as bar:
+            for class_member in selected_class_members:
+                class_member_named_user = self.get_named_user(class_member.github_username)
+                logging.info("Inviting class member '%s' to repo '%s' with permission: '%s'", class_member, repo.full_name, permission)
+                repo.add_to_collaborators(class_member_named_user, permission=permission)
+                logging.info("Invited successfully!")
+                bar()
 
     def revoke_class_access_from_repo(self, full_repo_name: str, selected_class_members: List[Member],) -> None:
         logging.info("Revoke class access from repo '%s' for the following class members.", full_repo_name)
 
         repo = self.get_repo(full_repo_name)
 
-        for class_member in selected_class_members:
-            class_member_named_user = self.get_named_user(class_member.github_username)
-            try:
-                repo.remove_from_collaborators(class_member_named_user)
-                self.remove_invitation(repo, class_member_named_user)
+        with alive_bar(len(selected_class_members), title="Revoke access:") as bar:
+            for class_member in selected_class_members:
+                class_member_named_user = self.get_named_user(class_member.github_username)
+                try:
+                    repo.remove_from_collaborators(class_member_named_user)
+                    self.remove_invitation(repo, class_member_named_user)
 
-                logging.info("Revoked access from repo '%s' for user '%s'", repo.full_name, class_member)
-            except github.UnknownObjectException as e:
-                logging.error("%s", e)
-                logging.error("Unable to revoke access from repo '%s' for user '%s'", repo.full_name, class_member)
+                    logging.info("Revoked access from repo '%s' for user '%s'", repo.full_name, class_member)
+                except github.UnknownObjectException as e:
+                    logging.error("%s", e)
+                    logging.error("Unable to revoke access from repo '%s' for user '%s'", repo.full_name, class_member)
+                bar()
 
     def clone_org(self, org_name: str) -> None:
         logging.info("Cloning all repos of org '%s'", org_name)
@@ -322,11 +332,13 @@ class GithubOperations:
         org = self.get_org(org_name)
         repos = org.get_repos()
 
-        for repo in repos:
-            backup_repo_dir = backup_dir / repo.name
-            logging.info("Cloning repo '%s' -> '%s'", repo.clone_url, backup_repo_dir)
-            backup_repo_dir.mkdir()
-            self.clone_repo(repo.clone_url, backup_repo_dir)
+        with alive_bar(repos.totalCount, title="Cloning repos:") as bar:
+            for repo in repos:
+                backup_repo_dir = backup_dir / repo.name
+                logging.info("Cloning repo '%s' -> '%s'", repo.clone_url, backup_repo_dir)
+                backup_repo_dir.mkdir()
+                self.clone_repo(repo.clone_url, backup_repo_dir)
+                bar()
 
     def repo_print_details(self, full_repo_name: str) -> None:
         repo = self.get_repo(full_repo_name)

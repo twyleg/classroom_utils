@@ -13,3 +13,4 @@ jsonschema
 PyGithub
 GitPython
 inquirerpy
+alive-progress
