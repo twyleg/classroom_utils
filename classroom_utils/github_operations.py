@@ -24,7 +24,8 @@ from typing import List
 from classroom_utils.roles import GithubUser, get_class_by_name, find_personal_repo, generate_personal_repo_name
 
 
-
+class GithubCredentialsNotFoundError(Exception):
+    pass
 
 
 class GithubCredentials:
@@ -34,29 +35,29 @@ class GithubCredentials:
     @classmethod
     def read_github_token(cls, args: argparse.Namespace) -> str | None:
         if args.github_token:
-            logging.info("GitHub token provided via cli argument.")
+            logging.debug("GitHub token provided via cli argument.")
             return args.github_token
         elif cls.GITHUB_TOKEN_ENVIRONMENT_VARIABLE_NAME in os.environ:
-            logging.info(f"GitHub token provided via env variable {cls.GITHUB_TOKEN_ENVIRONMENT_VARIABLE_NAME}.")
+            logging.debug(f"GitHub token provided via env variable {cls.GITHUB_TOKEN_ENVIRONMENT_VARIABLE_NAME}.")
             return os.environ[cls.GITHUB_TOKEN_ENVIRONMENT_VARIABLE_NAME]
-        else:
-            logging.error("Unable to find github token, please provide with '-g/--github-token' or env variable '%s'",
-                          cls.GITHUB_TOKEN_ENVIRONMENT_VARIABLE_NAME)
-            return None
+
+        raise GithubCredentialsNotFoundError(f"Unable to find github token, please provide with "
+                                             f"'-g/--github-token' or env variable "
+                                             f"'{cls.GITHUB_TOKEN_ENVIRONMENT_VARIABLE_NAME}'")
 
     @classmethod
     def read_github_username(cls, args: argparse.Namespace) -> str | None:
         if args.github_username:
-            logging.info("GitHub username provided via cli argument.")
+            logging.debug("GitHub username provided via cli argument.")
             return args.github_username
         elif cls.GITHUB_USERNAME_ENVIRONMENT_VARIABLE_NAME in os.environ:
-            logging.info(f"GitHub username provided via env variable {cls.GITHUB_USERNAME_ENVIRONMENT_VARIABLE_NAME}.")
+            logging.debug(f"GitHub username provided via env variable {cls.GITHUB_USERNAME_ENVIRONMENT_VARIABLE_NAME}.")
             return os.environ[cls.GITHUB_USERNAME_ENVIRONMENT_VARIABLE_NAME]
-        else:
-            logging.error(
-                "Unable to find github username, please provide with '-u/--github-username' or env variable '%s'",
-                cls.GITHUB_USERNAME_ENVIRONMENT_VARIABLE_NAME)
-            return None
+
+        raise GithubCredentialsNotFoundError(f"Unable to find github username, please provide with "
+                                             f"'-u/--github-username' or env variable "
+                                             f"'{cls.GITHUB_USERNAME_ENVIRONMENT_VARIABLE_NAME}'")
+
 
     @classmethod
     def read_github_credentials(cls, args: argparse.Namespace) -> "GithubCredentials":
