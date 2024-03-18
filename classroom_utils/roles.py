@@ -168,12 +168,12 @@ def get_class_by_name(class_name: str, classes: Dict[str, Class] | None = None) 
     return classes[class_name]
 
 
-def generate_personal_repo_name(student: Member, prefix: str | None = None):
+def generate_personal_repo_name(class_member: Member, prefix: str | None = None):
     def normalize(text: str) -> str:
         return text.lower().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "sz")
 
-    name = normalize(student.name)
-    surname = normalize(student.surname)
+    name = normalize(class_member.name)
+    surname = normalize(class_member.surname)
 
     if prefix:
         return f"{prefix}_{name}_{surname}"

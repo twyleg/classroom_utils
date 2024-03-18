@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List
 
 from classroom_utils import dialogs, github_operations, local_operations
+from classroom_utils.roles import Member, get_class_by_name
 from classroom_utils.subcommands import Command
 
 
@@ -16,6 +17,10 @@ class ClassroomUtilsBaseCommand(Command):
 
     def get_class_name(self, args: argparse.Namespace) -> str:
         return args.class_name if args.class_name else dialogs.user_input_request_class_name()
+
+    def get_selected_class_members(self, class_name: str) -> List[Member]:
+        class_members = get_class_by_name(class_name)
+        return dialogs.user_input_request_selected_class_members(list(class_members.active_members))
 
 
 class LocalSubCommand(ClassroomUtilsBaseCommand):
@@ -225,14 +230,17 @@ class GithubOrgAccessGrantSubCommand(GithubOrgInitSubCommand):
         super().prepare_handler(args)
         org_name = self.get_org_name(args)
         class_name = self.get_class_name(args)
+        selected_class_members = self.get_selected_class_members(class_name)
         permission = self.get_permission(args)
+
 
         logging.info(f"github org access grant:")
         logging.info("\t-org_name=%s", org_name)
         logging.info("\t-class_name=%s", class_name)
+        logging.info("\t-selected_class_members%s", selected_class_members)
         logging.info("\t-permission=%s", permission)
 
-        self.github_ops.grant_access_to_personal_class_repos_in_org(org_name, class_name, permission)
+        self.github_ops.grant_access_to_personal_class_repos_in_org(org_name, selected_class_members, permission)
 
 
 class GithubOrgAccessRevokeSubCommand(GithubOrgInitSubCommand):
@@ -243,12 +251,14 @@ class GithubOrgAccessRevokeSubCommand(GithubOrgInitSubCommand):
         super().prepare_handler(args)
         org_name = self.get_org_name(args)
         class_name = self.get_class_name(args)
+        selected_class_members = self.get_selected_class_members(class_name)
 
         logging.info(f"github org access grant:")
         logging.info("\t-org_name=%s", org_name)
         logging.info("\t-class_name=%s", class_name)
+        logging.info("\t-selected_class_members%s", selected_class_members)
 
-        self.github_ops.revoke_access_from_personal_class_repos_in_org(org_name, class_name)
+        self.github_ops.revoke_access_from_personal_class_repos_in_org(org_name, selected_class_members)
 
 
 class GithubOrgReviewCreateSubCommand(GithubOrgInitSubCommand):
@@ -312,7 +322,7 @@ class GithubRepoSubCommand(GithubSubCommand):
         super().prepare_handler(args)
         repo_name = self.get_repo_name(args)
 
-        logging.info(f"github org review status:")
+        logging.info(f"github repo:")
         logging.info("\t-repo_name=%s", repo_name)
 
         self.github_ops.repo_print_details(repo_name)
@@ -334,14 +344,16 @@ class GithubRepoAccessGrantSubCommand(GithubRepoSubCommand):
         super().prepare_handler(args)
         repo_name = self.get_repo_name(args)
         class_name = self.get_class_name(args)
+        selected_class_members = self.get_selected_class_members(class_name)
         permission = self.get_permission(args)
 
-        logging.info(f"github org review status:")
+        logging.info(f"github repo access grant")
         logging.info("\t-repo_name=%s", repo_name)
         logging.info("\t-class_name=%s", class_name)
+        logging.info("\t-selected_class_members=%s", selected_class_members)
         logging.info("\t-permission=%s", permission)
 
-        self.github_ops.grant_class_access_to_repo(repo_name, class_name, permission)
+        self.github_ops.grant_class_access_to_repo(repo_name, selected_class_members, permission)
 
 
 class GithubRepoAccessRevokeSubCommand(GithubRepoSubCommand):
@@ -352,10 +364,12 @@ class GithubRepoAccessRevokeSubCommand(GithubRepoSubCommand):
         super().prepare_handler(args)
         repo_name = self.get_repo_name(args)
         class_name = self.get_class_name(args)
+        selected_class_members = self.get_selected_class_members(class_name)
 
-        logging.info(f"github org review status:")
+        logging.info(f"github repo access revoke:")
         logging.info("\t-repo_name=%s", repo_name)
         logging.info("\t-class_name=%s", class_name)
+        logging.info("\t-selected_class_members=%s", selected_class_members)
 
-        self.github_ops.revoke_class_access_from_repo(repo_name, class_name)
+        self.github_ops.revoke_class_access_from_repo(repo_name, selected_class_members)
 

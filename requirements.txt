@@ -12,3 +12,5 @@ pytest-mock
 jsonschema
 PyGithub
 GitPython
+inquirerpy
+alive-progress
