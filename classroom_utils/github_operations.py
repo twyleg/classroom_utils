@@ -317,20 +317,20 @@ class GithubOperations:
                 logging.error("%s", e)
                 logging.error("Unable to revoke access from repo '%s' for user '%s'", repo.full_name, class_member)
 
-    def clone_org(self, org_name: str) -> None:
+    def clone_org(self, org_name: str, working_dir: Path) -> None:
         logging.info("Cloning all repos of org '%s'", org_name)
 
-        backup_dir = Path.cwd() / org_name
-        backup_dir.mkdir(exist_ok=False)
+        clone_dir = working_dir / org_name
+        clone_dir.mkdir(exist_ok=False)
 
         org = self.get_org(org_name)
         repos = org.get_repos()
 
         for repo in repos:
-            backup_repo_dir = backup_dir / repo.name
-            logging.info("Cloning repo '%s' -> '%s'", repo.clone_url, backup_repo_dir)
-            backup_repo_dir.mkdir()
-            self.clone_repo(repo.clone_url, backup_repo_dir)
+            repo_clone_dir = clone_dir / repo.name
+            logging.info("Cloning repo '%s' -> '%s'", repo.clone_url, repo_clone_dir)
+            repo_clone_dir.mkdir()
+            self.clone_repo(repo.clone_url, repo_clone_dir)
 
     def repo_print_details(self, full_repo_name: str) -> None:
         repo = self.get_repo(full_repo_name)

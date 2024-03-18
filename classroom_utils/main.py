@@ -15,6 +15,7 @@ def main() -> None:
     root_command.add_subcommand(command="github class check", command_type=GithubClassCheckSubCommand)
     root_command.add_subcommand(command="github org", command_type=GithubOrgSubCommand)
     root_command.add_subcommand(command="github org init", command_type=GithubOrgInitSubCommand)
+    root_command.add_subcommand(command="github org clone", command_type=GithubOrgCloneSubCommand)
     root_command.add_subcommand(command="github org access", command_type=GithubOrgAccessSubCommand)
     root_command.add_subcommand(command="github org access grant", command_type=GithubOrgAccessGrantSubCommand)
     root_command.add_subcommand(command="github org access revoke", command_type=GithubOrgAccessRevokeSubCommand)

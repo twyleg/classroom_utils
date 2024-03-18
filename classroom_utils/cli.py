@@ -48,7 +48,7 @@ class LocalClassMkdirSubCommand(LocalSubCommand):
         print(f"local class mkdir")
 
         class_name = self.get_class_name(args)
-        working_dir = args.working_dir
+        working_dir = Path(args.working_dir)
         subdirs: List[str] = args.subdirs.split(",") if args.subdirs else []
 
         logging.info("Creating directory structure: class_name='%s', working_dir='%s', subdirs='%s'", class_name, working_dir, subdirs)
@@ -172,6 +172,31 @@ class GithubOrgInitSubCommand(GithubOrgSubCommand):
         self.github_ops.create_personal_class_repos_in_org(org_name, class_name, repo_prefix, template)
 
 
+class GithubOrgCloneSubCommand(GithubOrgSubCommand):
+    def __init__(self, parser):
+        super().__init__(parser)
+        self.parser.add_argument('--class-name', type=str, default=None, help="Class name")
+        self.parser.add_argument(
+            "-w",
+            "--working-dir",
+            help="Working directory.",
+            type=Path,
+            default=Path.cwd()
+        )
+
+    def handle(self, args: argparse.Namespace) -> None:
+        super().prepare_handler(args)
+        org_name = self.get_org_name(args)
+        working_dir = args.working_dir
+
+
+        logging.info(f"github org clone:")
+        logging.info("\t-org_name=%s", org_name)
+        logging.info("\t-working_dir=%s", working_dir)
+
+        self.github_ops.clone_org(org_name, working_dir)
+
+
 class GithubOrgAccessSubCommand(GithubOrgSubCommand):
     def __init__(self, parser):
         super().__init__(parser)
@@ -226,7 +251,7 @@ class GithubOrgAccessRevokeSubCommand(GithubOrgInitSubCommand):
         self.github_ops.revoke_access_from_personal_class_repos_in_org(org_name, class_name)
 
 
-class GithubOrgReviewCreateSubCommand(GithubOrgSubCommand):
+class GithubOrgReviewCreateSubCommand(GithubOrgInitSubCommand):
     def __init__(self, parser):
         super().__init__(parser)
 
