@@ -29,7 +29,9 @@ setup(
     install_requires=[
         "jsonschema",
         "PyGithub",
-        "GitPython"
+        "GitPython",
+        "inquirerpy",
+        "alive-progress"
     ],
     entry_points={
         "console_scripts": [
