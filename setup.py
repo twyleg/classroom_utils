@@ -27,11 +27,12 @@ setup(
     long_description_content_type="text/markdown",
     include_package_data=True,
     install_requires=[
-        "jsonschema",
-        "PyGithub",
-        "GitPython",
-        "inquirerpy",
-        "alive-progress"
+        "jsonschema~=4.21.1",
+        "PyGithub~=2.2.0",
+        "GitPython~=3.1.42",
+        "inquirerpy~=0.3.4",
+        "alive-progress~=3.1.5",
+        "prompt-toolkit~=3.0.43",
     ],
     entry_points={
         "console_scripts": [

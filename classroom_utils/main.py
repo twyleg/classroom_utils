@@ -9,7 +9,7 @@ FORMAT = "[%(asctime)s][%(levelname)s][%(name)s]: %(message)s"
 
 def main() -> None:
 
-    root_command = RootCommand()
+    root_command = PromptRootCommand()
     root_command.add_subcommand(command="local")
     root_command.add_subcommand(command="local mkdir", command_type=LocalClassMkdirSubCommand)
     root_command.add_subcommand(command="github", command_type=GithubSubCommand)
@@ -39,13 +39,6 @@ def main() -> None:
     logging.debug("Log level: %s", logging.getLevelName(log_level))
     logging.debug("Arguments: %s", args)
     logging.debug("Command: %s", args.func.__name__)
-
-    try:
-        GithubCredentials.read_github_credentials(args)
-        find_classroom_utils_config_file()
-    except (GithubCredentialsNotFoundError, ClassroomUtilsConfigNotFoundError) as e:
-        logging.error(e)
-        sys.exit(-1)
 
     try:
         args.func(args)

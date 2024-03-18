@@ -5,12 +5,13 @@ mypy~=1.7.1
 black~=23.11.0
 tox~=4.11.4
 versioneer~=0.29
-pyinstaller
-pytest
-pytest-mock
+pyinstaller~=6.4.0
+pytest~=8.1.0
+pytest-mock~=3.12.0
 
-jsonschema
-PyGithub
-GitPython
-inquirerpy
-alive-progress
+jsonschema~=4.21.1
+PyGithub~=2.2.0
+GitPython~=3.1.42
+inquirerpy~=0.3.4
+alive-progress~=3.1.5
+prompt-toolkit~=3.0.43
