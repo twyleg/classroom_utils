@@ -30,7 +30,7 @@ class GithubUser:
         self.active = active
 
     def __repr__(self):
-        return f"name='{self.name}', surname='{self.surname}', github_username='{self.github_username}', activ='{self.active}"
+        return f"name='{self.name}', surname='{self.surname}', github_username='{self.github_username}', active='{self.active}"
 
     @property
     def fullname(self) -> str:

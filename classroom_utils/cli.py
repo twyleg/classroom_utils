@@ -2,12 +2,46 @@
 import argparse
 import logging
 import sys
+import traceback
 from pathlib import Path
 from typing import List
 
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import NestedCompleter
+from prompt_toolkit.history import InMemoryHistory
+
 from classroom_utils import dialogs, github_operations, local_operations
-from classroom_utils.roles import Member, get_class_by_name
-from classroom_utils.subcommands import Command
+from classroom_utils.github_operations import GithubCredentialsNotFoundError
+from classroom_utils.roles import Member, get_class_by_name, ClassroomUtilsConfigNotFoundError, \
+    find_classroom_utils_config_file
+from classroom_utils.subcommands import Command, RootCommand
+
+
+class PromptRootCommand(RootCommand):
+
+    def __init__(self):
+        super().__init__()
+
+    def handle(self, args: argparse.Namespace) -> None:
+        completer = NestedCompleter.from_nested_dict(self.commands_to_dict())
+        session = PromptSession(history=InMemoryHistory(), completer=completer)
+
+        while True:
+            try:
+                subcommand_string = session.prompt('classroom_utils $ ')
+            except KeyboardInterrupt as e:
+                logging.info("Exiting...")
+                sys.exit(0)
+
+            try:
+                logging.debug("Entered command: %s", subcommand_string)
+                subcommand = self.find_subcommand(subcommand_string)
+                subcommand.handle(args)
+            except KeyboardInterrupt as e:
+                logging.info("Command aborted...")
+            except Exception as e:
+                logging.error("%s: %s", e.__class__.__name__, e)
+                logging.debug(traceback.format_exc())
 
 
 class ClassroomUtilsBaseCommand(Command):
@@ -16,7 +50,7 @@ class ClassroomUtilsBaseCommand(Command):
         super().__init__(parser)
 
     def get_class_name(self, args: argparse.Namespace) -> str:
-        return args.class_name if args.class_name else dialogs.user_input_request_class_name()
+        return args.class_name if hasattr(args, "class_name") and args.class_name else dialogs.user_input_request_class_name()
 
     def get_selected_class_members(self, class_name: str) -> List[Member]:
         class_members = get_class_by_name(class_name)
@@ -35,6 +69,13 @@ class LocalSubCommand(ClassroomUtilsBaseCommand):
             type=str,
             default=Path.cwd()
         )
+
+    def prepare_handler(self, args: argparse.Namespace) -> None:
+        try:
+            find_classroom_utils_config_file()
+        except ClassroomUtilsConfigNotFoundError as e:
+            logging.error(e)
+            sys.exit(-1)
 
 
 class LocalClassMkdirSubCommand(LocalSubCommand):
@@ -96,21 +137,28 @@ class GithubSubCommand(ClassroomUtilsBaseCommand):
             sys.exit(-1)
 
     def prepare_handler(self, args: argparse.Namespace) -> None:
-        self.github_credentials = self.get_github_credentials(args)
-        self.github_ops = github_operations.GithubOperations(self.github_credentials)
+        try:
+            find_classroom_utils_config_file()
+            self.github_credentials = self.get_github_credentials(args)
+            self.github_ops = github_operations.GithubOperations(self.github_credentials)
+        except (GithubCredentialsNotFoundError, ClassroomUtilsConfigNotFoundError) as e:
+            logging.error(e)
+            sys.exit(-1)
 
     def get_org_name(self, args: argparse.Namespace) -> str:
-        return args.org_name if args.org_name else dialogs.user_input_request_org_name(self.github_ops)
+        return args.org_name if hasattr(args, "org_name") and args.org_name else dialogs.user_input_request_org_name(self.github_ops)
 
     def get_repo_name(self, args: argparse.Namespace) -> str:
-        return args.repo if args.repo else dialogs.user_input_request_repo_name(self.github_ops)
+        return args.repo if hasattr(args, "repo") and args.repo else dialogs.user_input_request_repo_name(self.github_ops)
 
     def get_permission(self, args: argparse.Namespace) -> str:
-        return args.permission if args.permission else dialogs.user_input_request_repo_permission()
+        return args.permission if hasattr(args, "permission") and args.permission else dialogs.user_input_request_repo_permission()
 
     def handle(self, args: argparse.Namespace) -> None:
         self.prepare_handler(args)
-        logging.info("github:")
+        logging.debug("github:")
+
+        self.github_ops.get_user_info(self.github_ops.get_user().login)
 
 
 class GithubClassCheckSubCommand(GithubSubCommand):
@@ -123,8 +171,8 @@ class GithubClassCheckSubCommand(GithubSubCommand):
         super().prepare_handler(args)
         class_name = self.get_class_name(args)
 
-        logging.info("github check class:")
-        logging.info("\t-class_name=%s", class_name)
+        logging.debug("github check class:")
+        logging.debug("\t-class_name=%s", class_name)
 
         self.github_ops.class_check(class_name)
 
@@ -139,8 +187,10 @@ class GithubOrgSubCommand(GithubSubCommand):
         super().prepare_handler(args)
         org_name = self.get_org_name(args)
 
-        logging.info("github org:")
-        logging.info("\t-org_name=%s", org_name)
+        logging.debug("github org:")
+        logging.debug("\t-org_name=%s", org_name)
+
+        logging.warning("Not yet implemented!")
 
 
 class GithubOrgInitSubCommand(GithubOrgSubCommand):
@@ -168,11 +218,11 @@ class GithubOrgInitSubCommand(GithubOrgSubCommand):
         repo_prefix = args.repo_prefix
         template = args.template
 
-        logging.info(f"github org init:")
-        logging.info("\t-org_name=%s", org_name)
-        logging.info("\t-class_name=%s", class_name)
-        logging.info("\t-repo_prefix=%s", repo_prefix)
-        logging.info("\t-template=%s", template)
+        logging.debug(f"github org init:")
+        logging.debug("\t-org_name=%s", org_name)
+        logging.debug("\t-class_name=%s", class_name)
+        logging.debug("\t-repo_prefix=%s", repo_prefix)
+        logging.debug("\t-template=%s", template)
 
         self.github_ops.create_personal_class_repos_in_org(org_name, class_name, repo_prefix, template)
 
@@ -194,10 +244,9 @@ class GithubOrgCloneSubCommand(GithubOrgSubCommand):
         org_name = self.get_org_name(args)
         working_dir = args.working_dir
 
-
-        logging.info(f"github org clone:")
-        logging.info("\t-org_name=%s", org_name)
-        logging.info("\t-working_dir=%s", working_dir)
+        logging.debug(f"github org clone:")
+        logging.debug("\t-org_name=%s", org_name)
+        logging.debug("\t-working_dir=%s", working_dir)
 
         self.github_ops.clone_org(org_name, working_dir)
 
@@ -210,8 +259,8 @@ class GithubOrgAccessSubCommand(GithubOrgSubCommand):
         super().prepare_handler(args)
         org_name = self.get_org_name(args)
 
-        logging.info(f"github org access:")
-        logging.info("\t-org_name=%s", org_name)
+        logging.debug(f"github org access:")
+        logging.debug("\t-org_name=%s", org_name)
 
 
 class GithubOrgAccessGrantSubCommand(GithubOrgInitSubCommand):
@@ -233,12 +282,11 @@ class GithubOrgAccessGrantSubCommand(GithubOrgInitSubCommand):
         selected_class_members = self.get_selected_class_members(class_name)
         permission = self.get_permission(args)
 
-
-        logging.info(f"github org access grant:")
-        logging.info("\t-org_name=%s", org_name)
-        logging.info("\t-class_name=%s", class_name)
-        logging.info("\t-selected_class_members%s", selected_class_members)
-        logging.info("\t-permission=%s", permission)
+        logging.debug(f"github org access grant:")
+        logging.debug("\t-org_name=%s", org_name)
+        logging.debug("\t-class_name=%s", class_name)
+        logging.debug("\t-selected_class_members%s", selected_class_members)
+        logging.debug("\t-permission=%s", permission)
 
         self.github_ops.grant_access_to_personal_class_repos_in_org(org_name, selected_class_members, permission)
 
@@ -253,10 +301,10 @@ class GithubOrgAccessRevokeSubCommand(GithubOrgInitSubCommand):
         class_name = self.get_class_name(args)
         selected_class_members = self.get_selected_class_members(class_name)
 
-        logging.info(f"github org access grant:")
-        logging.info("\t-org_name=%s", org_name)
-        logging.info("\t-class_name=%s", class_name)
-        logging.info("\t-selected_class_members%s", selected_class_members)
+        logging.debug(f"github org access grant:")
+        logging.debug("\t-org_name=%s", org_name)
+        logging.debug("\t-class_name=%s", class_name)
+        logging.debug("\t-selected_class_members%s", selected_class_members)
 
         self.github_ops.revoke_access_from_personal_class_repos_in_org(org_name, selected_class_members)
 
@@ -285,11 +333,11 @@ class GithubOrgReviewCreateSubCommand(GithubOrgInitSubCommand):
         head_branch_name = args.head_branch
         review_branch_name = args.review_branch
 
-        logging.info(f"github org review create:")
-        logging.info("\torg_name=%s", org_name)
-        logging.info("\tclass_name=%s", class_name)
-        logging.info("\thead_branch=%s", head_branch_name)
-        logging.info("\treview_branch=%s", review_branch_name)
+        logging.debug(f"github org review create:")
+        logging.debug("\torg_name=%s", org_name)
+        logging.debug("\tclass_name=%s", class_name)
+        logging.debug("\thead_branch=%s", head_branch_name)
+        logging.debug("\treview_branch=%s", review_branch_name)
 
         self.github_ops.create_reviews_for_repos_in_org(org_name, class_name, head_branch_name, review_branch_name)
 
@@ -302,8 +350,10 @@ class GithubOrgReviewStatusSubCommand(GithubOrgSubCommand):
         super().prepare_handler(args)
         org_name = self.get_org_name(args)
 
-        logging.info(f"github org review status:")
-        logging.info("\torg_name=%s", org_name)
+        logging.debug(f"github org review status:")
+        logging.debug("\torg_name=%s", org_name)
+
+        logging.warning("Not yet implemented!")
 
 
 class GithubRepoSubCommand(GithubSubCommand):
@@ -322,8 +372,8 @@ class GithubRepoSubCommand(GithubSubCommand):
         super().prepare_handler(args)
         repo_name = self.get_repo_name(args)
 
-        logging.info(f"github repo:")
-        logging.info("\t-repo_name=%s", repo_name)
+        logging.debug(f"github repo:")
+        logging.debug("\t-repo_name=%s", repo_name)
 
         self.github_ops.repo_print_details(repo_name)
 
@@ -347,11 +397,11 @@ class GithubRepoAccessGrantSubCommand(GithubRepoSubCommand):
         selected_class_members = self.get_selected_class_members(class_name)
         permission = self.get_permission(args)
 
-        logging.info(f"github repo access grant")
-        logging.info("\t-repo_name=%s", repo_name)
-        logging.info("\t-class_name=%s", class_name)
-        logging.info("\t-selected_class_members=%s", selected_class_members)
-        logging.info("\t-permission=%s", permission)
+        logging.debug(f"github repo access grant")
+        logging.debug("\t-repo_name=%s", repo_name)
+        logging.debug("\t-class_name=%s", class_name)
+        logging.debug("\t-selected_class_members=%s", selected_class_members)
+        logging.debug("\t-permission=%s", permission)
 
         self.github_ops.grant_class_access_to_repo(repo_name, selected_class_members, permission)
 
@@ -366,10 +416,10 @@ class GithubRepoAccessRevokeSubCommand(GithubRepoSubCommand):
         class_name = self.get_class_name(args)
         selected_class_members = self.get_selected_class_members(class_name)
 
-        logging.info(f"github repo access revoke:")
-        logging.info("\t-repo_name=%s", repo_name)
-        logging.info("\t-class_name=%s", class_name)
-        logging.info("\t-selected_class_members=%s", selected_class_members)
+        logging.debug(f"github repo access revoke:")
+        logging.debug("\t-repo_name=%s", repo_name)
+        logging.debug("\t-class_name=%s", class_name)
+        logging.debug("\t-selected_class_members=%s", selected_class_members)
 
         self.github_ops.revoke_class_access_from_repo(repo_name, selected_class_members)
 

@@ -36,7 +36,7 @@ class GithubCredentials:
 
     @classmethod
     def read_github_token(cls, args: argparse.Namespace) -> str | None:
-        if args.github_token:
+        if hasattr(args, "github_token") and args.github_token:
             logging.debug("GitHub token provided via cli argument.")
             return args.github_token
         elif cls.GITHUB_TOKEN_ENVIRONMENT_VARIABLE_NAME in os.environ:
@@ -49,7 +49,7 @@ class GithubCredentials:
 
     @classmethod
     def read_github_username(cls, args: argparse.Namespace) -> str | None:
-        if args.github_username:
+        if hasattr(args, "github_username") and args.github_username:
             logging.debug("GitHub username provided via cli argument.")
             return args.github_username
         elif cls.GITHUB_USERNAME_ENVIRONMENT_VARIABLE_NAME in os.environ:
@@ -89,19 +89,13 @@ class GithubOperations:
             return False
 
     def validate_users(self, users: List[GithubUser]) -> None:
-
-        valid_users: List[GithubUser] = []
-        invalid_users: List[GithubUser] = []
-
-        for user in users:
-            valid_users.append(user) if self._validate_user(user.github_username) else invalid_users.append(user)
-
-        logging.info("Valid:")
-        for valid_user in valid_users:
-            logging.info("  %s", valid_user)
-        logging.info("Invalid:")
-        for invalid_user in invalid_users:
-            logging.info("  %s", invalid_user)
+        with alive_bar(len(users), title="Validating users:", enrich_print=False) as bar:
+            for user in users:
+                if self._validate_user(user.github_username):
+                    logging.info("  %s", user)
+                else:
+                    logging.warning("  %s", user)
+                bar()
 
     def get_user(self) -> github.NamedUser.NamedUser:
         return self.github_connection.get_user()
@@ -165,6 +159,17 @@ class GithubOperations:
         os.environ["GIT_USERNAME"] = self.github_credentials.username
         os.environ["GIT_PASSWORD"] = self.github_credentials.token
         git.Repo.clone_from(clone_url, target_dir)
+
+    def get_user_info(self, github_username: str) -> None:
+        github_user = self.get_named_user(github_username)
+        logging.info("Name: %s", github_user.name)
+        logging.info("GitHub username: %s", github_user.login)
+        logging.info("Orgs:")
+        for org in github_user.get_orgs():
+            logging.info("  %s", org.name)
+        logging.info("Repos:")
+        for repo in github_user.get_repos():
+            logging.info("  %s", repo.full_name)
 
     def class_check(self, class_name: str) -> None:
         logging.info("Validating class '%s'", class_name)

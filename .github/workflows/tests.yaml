@@ -1,0 +1,19 @@
+name: tests
+
+run-name: tests
+on: [push]
+
+jobs:
+  run-pyinstaller-smoketest:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - run: |
+          pip install -r requirements.txt
+          tox -e pyinstaller
+          dist\classroom_utils.exe --version
