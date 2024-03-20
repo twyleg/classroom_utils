@@ -3,6 +3,7 @@ from PyInstaller.utils.hooks import collect_data_files
 
 datas = []
 datas += collect_data_files('classroom_utils')
+datas += collect_data_files('grapheme')
 
 
 a = Analysis(
