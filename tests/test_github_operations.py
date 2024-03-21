@@ -5,7 +5,7 @@ import logging
 
 from pathlib import Path
 
-from classroom_utils.roles import Member, generate_personal_repo_name
+from classroom_utils.classes import Member
 
 #
 # General naming convention for unit tests:
@@ -16,9 +16,9 @@ from classroom_utils.roles import Member, generate_personal_repo_name
 class TestGithubOperations:
 
     def test_ArrangedState_Action_Assertion(self, caplog, tmp_path):
-        test_member = Member(name="Müllerß", surname="Rüdigör", github_username="void", active=True)
+        test_member = Member(name="Müllerß Ölsen", surname="Rüdigör Björn", github_username="void", active=True)
 
-        repo_name = generate_personal_repo_name(test_member)
-        assert repo_name == "muellersz_ruedigoer"
+        repo_name = test_member.generate_personal_repo_name()
+        assert repo_name == "muellersz_oelsen_ruedigoer_bjoern"
 
 

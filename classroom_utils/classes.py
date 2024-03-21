@@ -31,7 +31,7 @@ class Member(User):
 
     def generate_personal_repo_name(self, prefix: str | None = None):
         def normalize(text: str) -> str:
-            return text.lower().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "sz")
+            return text.lower().replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "sz").replace(" ", "_")
 
         name = normalize(self.name)
         surname = normalize(self.surname)
