@@ -4,16 +4,17 @@ import logging
 from pathlib import Path
 from typing import List
 
-from classroom_utils.roles import get_class_by_name, generate_personal_repo_name
+from classroom_utils.classes import Class
 
 
-def create_directory_structure_for_class(class_name: str, working_dir: Path, subdirs: List[str]) -> None:
-    logging.debug("mkdir: %s", class_name)
+logm = logging.getLogger("local_operations")
 
-    selected_class = get_class_by_name(class_name)
+
+def create_directory_structure_for_class(selected_class: Class, working_dir: Path, subdirs: List[str]) -> None:
+    logm.debug("mkdir: %s", selected_class.name)
 
     for class_member in selected_class.active_members:
-        repo_name = generate_personal_repo_name(class_member)
+        repo_name = class_member.generate_personal_repo_name()
 
         class_member_directory_path = working_dir / repo_name
 

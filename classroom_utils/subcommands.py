@@ -1,9 +1,17 @@
 # Copyright (C) 2024 twyleg
 import argparse
+import logging
 import sys
 from typing import Dict, Union
 
 from classroom_utils import __version__
+
+
+logm = logging.getLogger("subcommands")
+
+
+class SubcommandNotAvailableError(Exception):
+    pass
 
 
 class Command:
@@ -31,8 +39,11 @@ class Command:
             version=__version__,
         )
 
+    def prepare_handler(self, args: argparse.Namespace) -> None:
+        pass
+
     def default_handle(self, args: argparse.Namespace):
-        print("Error: Function not yet implemented!")
+        logm.error("Function not yet implemented!")
 
     CommandDict = Dict[str, Union[None, "CommandDict"]] | None
 
@@ -46,11 +57,14 @@ class Command:
         command_chain = command.split(" ")
 
         if len(command_chain) == 1:
-            return self.subcommands[command]
+            if command in self.subcommands:
+                return self.subcommands[command]
         else:
             next_command = command_chain[0]
             remaining_commands = " ".join(command_chain[1:])
-            return self.subcommands[next_command].find_subcommand(remaining_commands)
+            if next_command in self.subcommands:
+                return self.subcommands[next_command].find_subcommand(remaining_commands)
+        raise SubcommandNotAvailableError()
 
     def add_subcommand(self, command: str, command_type=None) -> "Command":
 

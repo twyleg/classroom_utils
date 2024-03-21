@@ -1,54 +1,18 @@
 {
   "type": "object",
   "properties": {
-    "classes": {
-      "type": "object",
-      "patternProperties": {
-        "^.+$": {
-          "$ref": "#/$defs/class"
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-
-  "$defs": {
-    "github_user": {
-      "type": "object",
-      "properties": {
-        "name": { "type": "string" },
-        "surname": { "type": "string" },
-        "github_username": { "type": "string" },
-        "active": { "type": "boolean", "default": true }
-      },
-      "required": [
-        "name",
-        "surname",
-        "github_username"
-      ],
-      "additionalProperties": false
+    "github_token": {
+      "type": "string"
     },
-    "github_user_list": {
+    "github_username": {
+      "type": "string"
+    },
+    "classlists": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/github_user"
+        "type": "string"
       }
     },
-    "class": {
-      "type": "object",
-      "properties": {
-        "moderators": {
-          "$ref": "#/$defs/github_user_list"
-        },
-        "members": {
-          "$ref": "#/$defs/github_user_list"
-        }
-      },
-      "additionalProperties": false,
-      "required": [
-        "moderators",
-        "members"
-      ]
-    }
+    "additionalProperties": false
   }
 }

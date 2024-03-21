@@ -1,0 +1,8 @@
+{
+	"github_token": "<GITHUB_PERSONAL_ACCESS_TOKEN>",
+	"github_username": "<GITHUB_USERNAME>",
+	"classlists": [
+		"relative_to_config_subfolder\\class_list_a.json",
+		"C:\\Users\\<USERNAME>\\absolute_path\\class_list_b.json"
+	]
+}

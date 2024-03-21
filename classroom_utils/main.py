@@ -1,14 +1,13 @@
 # Copyright (C) 2024 twyleg
-from classroom_utils.github_operations import GithubCredentials, GithubCredentialsNotFoundError
-from classroom_utils.roles import find_classroom_utils_config_file, ClassroomUtilsConfigNotFoundError
-from classroom_utils.subcommands import RootCommand
+from classroom_utils import __version__
 from classroom_utils.cli import *
 
+
+logm = logging.getLogger("main")
 FORMAT = "[%(asctime)s][%(levelname)s][%(name)s]: %(message)s"
 
 
 def main() -> None:
-
     root_command = PromptRootCommand()
     root_command.add_subcommand(command="local")
     root_command.add_subcommand(command="local mkdir", command_type=LocalClassMkdirSubCommand)
@@ -35,10 +34,11 @@ def main() -> None:
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(stream=sys.stdout, format=FORMAT, level=log_level, force=True)
 
-    logging.info("classroom_utils started!")
-    logging.debug("Log level: %s", logging.getLevelName(log_level))
-    logging.debug("Arguments: %s", args)
-    logging.debug("Command: %s", args.func.__name__)
+    logm.info("classroom_utils started!")
+    logm.info(__version__)
+    logm.debug("Log level: %s", logging.getLevelName(log_level))
+    logm.debug("Arguments: %s", args)
+    logm.debug("Command: %s", args.func.__name__)
 
     try:
         args.func(args)

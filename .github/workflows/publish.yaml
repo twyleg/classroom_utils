@@ -61,4 +61,12 @@ jobs:
       uses: svenstaro/upload-release-action@v2
       with:
         file: dist\classroom_utils.exe
+    - name: Add example config to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        file: reosurces\classroom_utils_config.json
+    - name: Add example classlist to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        file: reosurces\classroom_utils_classlist.json
 

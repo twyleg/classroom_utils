@@ -6,6 +6,8 @@ import sys
 import github
 
 from pathlib import Path
+
+from classroom_utils.config import Config
 from classroom_utils.github_operations import GithubCredentials
 
 FILE_DIR = Path(__file__).parent
@@ -42,8 +44,16 @@ if __name__ == "__main__":
     log_level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(stream=sys.stdout, format=FORMAT, level=log_level, force=True)
 
-    github_credentials = GithubCredentials.read_github_credentials(args)
-    github_connection = github.Github(auth=github.Auth.Token(github_credentials.token))
+
+    config = Config()
+    config_filepath = Config.find_config_filepath()
+    config.read_from_file(config_filepath)
+
+    github_token = args.github_token if args.github_token else config.github_token
+
+    logging.debug("Github token: %s", github_token)
+
+    github_connection = github.Github(auth=github.Auth.Token(github_token))
 
     org = github_connection.get_organization(EXAMPLE_ORG_NAME)
     repos = org.get_repos()
