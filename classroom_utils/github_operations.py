@@ -130,11 +130,16 @@ class GithubOperations:
     @staticmethod
     def remove_invitation(repo: github.Repository.Repository, invitee: github.NamedUser.NamedUser) -> None:
         logm.debug("Removing invitations in repo '%s' for user '%s'", repo.full_name, invitee.login)
-        for invitation in repo.get_pending_invitations():
-            logm.debug("  - Found invitation: '%s'", invitation.invitee.login)
-            if invitation.invitee.login == invitee.login:
-                logm.debug("  - Remove invitation!")
-                repo.remove_invitation(invitation.id)
+
+        pending_invitations = repo.get_pending_invitations()
+
+        with alive_bar(pending_invitations.totalCount, title="Granting access:", enrich_print=False) as bar:
+            for invitation in pending_invitations:
+                logm.debug("  - Found invitation: '%s'", invitation.invitee.login)
+                if invitation.invitee.login == invitee.login:
+                    logm.debug("  - Remove invitation!")
+                    repo.remove_invitation(invitation.id)
+            bar()
 
     def clone_repo(self, clone_url: str, target_dir) -> None:
 
@@ -174,17 +179,20 @@ class GithubOperations:
                 logm.error("Repo '%s' is not a template! Unable to create personal class repos!", template_repo.name)
                 sys.exit(-1)
 
-        for class_member in selected_class.active_members:
-            repo_name = class_member.generate_personal_repo_name(repo_prefix)
-            if template_repo:
-                org.create_repo_from_template(repo_name, template_repo, private=True)
-                logm.info("Created personal class repo '%s' from template '%s'", repo_name, template_repo.full_name)
-            else:
-                org.create_repo(repo_name, private=True, auto_init=True)
-                logm.info("Created personal class repo '%s'", repo_name)
+        with alive_bar(len(selected_class.members), title="Granting access:", enrich_print=False) as bar:
+            for class_member in selected_class.active_members:
+                repo_name = class_member.generate_personal_repo_name(repo_prefix)
+                if template_repo:
+                    org.create_repo_from_template(repo_name, template_repo, private=True)
+                    logm.info("Created personal class repo '%s' from template '%s'", repo_name, template_repo.full_name)
+                else:
+                    org.create_repo(repo_name, private=True, auto_init=True)
+                    logm.info("Created personal class repo '%s'", repo_name)
+                bar()
 
-        for class_member in selected_class.inactive_members:
-            logm.info("Skipping repo creation of '%s' due to inactivity of class member", class_member.fullname)
+            for class_member in selected_class.inactive_members:
+                logm.info("Skipping repo creation of '%s' due to inactivity of class member", class_member.fullname)
+                bar()
 
     def create_reviews_for_repos_in_org(self, org_name: str, class_name: str, head_branch_name: str, review_branch_name: str) -> None:
 
@@ -197,46 +205,50 @@ class GithubOperations:
 
         pr_title = "Review"
 
-        for class_member in selected_class.active_members:
+        active_members = list(selected_class.active_members)
 
-            logm.info("Class member: '%s'", class_member)
+        with alive_bar(len(active_members), title="Cloning repos:", enrich_print=False) as bar:
+            for class_member in active_members:
 
-            repo = class_member.find_personal_repo(repos)
+                logm.info("Class member: '%s'", class_member)
 
-            if repo is None:
-                logm.warning("Failed to create review for '%s' ('%s')! Unable to find repo in org '%s'",
-                                class_member.fullname, class_member.github_username, org_name)
-                continue
+                repo = class_member.find_personal_repo(repos)
 
-            logm.info("Repo: '%s'", repo.full_name)
+                if repo is None:
+                    logm.warning("Failed to create review for '%s' ('%s')! Unable to find repo in org '%s'",
+                                 class_member.fullname, class_member.github_username, org_name)
+                    continue
 
-            if self.get_branch_by_name(repo, review_branch_name) is None:
-                commit_history = repo.get_commits().reversed
-                first_commit = commit_history[0]
+                logm.info("Repo: '%s'", repo.full_name)
 
-                repo.create_git_ref(f'refs/heads/{review_branch_name}', first_commit.sha)
-                logm.info("Created '%s' branch from first commit ('%s')", review_branch_name, first_commit)
-            else:
-                logm.warning("Branch '%s' already existing in repo '%s'!", review_branch_name, repo.name)
+                if self.get_branch_by_name(repo, review_branch_name) is None:
+                    commit_history = repo.get_commits().reversed
+                    first_commit = commit_history[0]
 
-            if self.get_pull_request_by_title(repo, pr_title) is not None:
-                logm.warning("Pull-Request with '%s' already existing in repo '%s'!", review_branch_name, repo.name)
-                continue
+                    repo.create_git_ref(f'refs/heads/{review_branch_name}', first_commit.sha)
+                    logm.info("Created '%s' branch from first commit ('%s')", review_branch_name, first_commit)
+                else:
+                    logm.warning("Branch '%s' already existing in repo '%s'!", review_branch_name, repo.name)
 
-            base_branch = self.get_branch_by_name(repo, review_branch_name)
-            head_branch = self.get_branch_by_name(repo, head_branch_name)
+                if self.get_pull_request_by_title(repo, pr_title) is not None:
+                    logm.warning("Pull-Request with '%s' already existing in repo '%s'!", review_branch_name, repo.name)
+                    continue
 
-            if base_branch.commit.sha == head_branch.commit.sha:
-                logm.warning("Unable to create PR! Base branch '%s' and head branch '%s' are equal.",
-                                base_branch.name, head_branch.name)
-                continue
+                base_branch = self.get_branch_by_name(repo, review_branch_name)
+                head_branch = self.get_branch_by_name(repo, head_branch_name)
 
-            try:
-                repo.create_pull(review_branch_name, head_branch_name, title=pr_title)
-                logm.info("Created pullrequest '%s' <- '%s' in repository '%s'", review_branch_name,
-                             head_branch_name, repo.name)
-            except github.GithubException as e:
-                logm.error("Create pullrequest failed with message: '$s'", e.message)
+                if base_branch.commit.sha == head_branch.commit.sha:
+                    logm.warning("Unable to create PR! Base branch '%s' and head branch '%s' are equal.",
+                                    base_branch.name, head_branch.name)
+                    continue
+
+                try:
+                    repo.create_pull(review_branch_name, head_branch_name, title=pr_title)
+                    logm.info("Created pullrequest '%s' <- '%s' in repository '%s'", review_branch_name,
+                                 head_branch_name, repo.name)
+                except github.GithubException as e:
+                    logm.error("Create pullrequest failed with message: '$s'", e.message)
+            bar()
 
     def grant_access_to_personal_class_repos_in_org(self, org_name: str, selected_class_members: List[Member],
                                                     permission: str) -> None:
@@ -244,7 +256,7 @@ class GithubOperations:
 
         org = self.get_org(org_name)
 
-        with alive_bar(len(selected_class_members), title="Granting access:") as bar:
+        with alive_bar(len(selected_class_members), title="Granting access:", enrich_print=False) as bar:
             for class_member in selected_class_members:
                 repo_name = class_member.generate_personal_repo_name()
 
@@ -261,21 +273,19 @@ class GithubOperations:
 
         org = self.get_org(org_name)
 
-        with alive_bar(len(selected_class_members), title="Revoking access:") as bar:
-            for class_member in selected_class_members:
-                repo_name = class_member.generate_personal_repo_name()
-                class_member_named_user = self.get_named_user(class_member.github_username)
-                try:
-                    repo = org.get_repo(repo_name)
-                    repo.remove_from_collaborators(class_member_named_user)
+        for class_member in selected_class_members:
+            repo_name = class_member.generate_personal_repo_name()
+            class_member_named_user = self.get_named_user(class_member.github_username)
+            try:
+                repo = org.get_repo(repo_name)
+                repo.remove_from_collaborators(class_member_named_user)
 
-                    self.remove_invitation(repo, class_member_named_user)
+                self.remove_invitation(repo, class_member_named_user)
 
-                    logm.info("Revoked access from personal class repo '%s' for '%s'", repo.full_name, class_member)
-                except github.UnknownObjectException as e:
-                    logm.error("%s", e)
-                    logm.error("Unable to revoke access for '%s'", repo_name)
-                bar()
+                logm.info("Revoked access from personal class repo '%s' for '%s'", repo.full_name, class_member)
+            except github.UnknownObjectException as e:
+                logm.error("%s", e)
+                logm.error("Unable to revoke access for '%s'", repo_name)
 
     def grant_class_access_to_repo(self, full_repo_name: str, selected_class_members: List[Member], permission: str) -> None:
         logm.info("Grant class access to repo '%s' with permission '%s' for the following class members:",
@@ -283,7 +293,7 @@ class GithubOperations:
 
         repo = self.get_repo(full_repo_name)
 
-        with alive_bar(len(selected_class_members), title="Granting access:") as bar:
+        with alive_bar(len(selected_class_members), title="Granting access:", enrich_print=False) as bar:
             for class_member in selected_class_members:
                 class_member_named_user = self.get_named_user(class_member.github_username)
                 logm.info("Inviting class member '%s' to repo '%s' with permission: '%s'", class_member, repo.full_name, permission)
@@ -296,7 +306,7 @@ class GithubOperations:
 
         repo = self.get_repo(full_repo_name)
 
-        with alive_bar(len(selected_class_members), title="Revoke access:") as bar:
+        with alive_bar(len(selected_class_members), title="Revoke access:", enrich_print=False) as bar:
             for class_member in selected_class_members:
                 class_member_named_user = self.get_named_user(class_member.github_username)
                 try:
@@ -318,7 +328,7 @@ class GithubOperations:
         org = self.get_org(org_name)
         repos = org.get_repos()
 
-        with alive_bar(repos.totalCount, title="Cloning repos:") as bar:
+        with alive_bar(repos.totalCount, title="Cloning repos:", enrich_print=False) as bar:
             for repo in repos:
                 backup_repo_dir = backup_dir / repo.name
                 logm.info("Cloning repo '%s' -> '%s'", repo.clone_url, backup_repo_dir)
