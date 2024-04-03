@@ -99,12 +99,6 @@ class ClassroomUtilsBaseCommand(Command):
     def get_class_name_from_user(self, args: argparse.Namespace) -> str:
         return args.class_name if hasattr(args, "class_name") and args.class_name else dialogs.user_input_request_class_name(self.classes.get_available_class_names())
 
-    def get_repo_prefix_from_user(self, args: argparse.Namespace) -> str | None:
-        return args.repo_prefix if hasattr(args, "repo_prefix") and args.repo_prefix else None
-
-    def get_template_from_user(self, args: argparse.Namespace) -> str | None:
-        return args.template if hasattr(args, "template") and args.template else None
-
     def get_selected_class_members_from_user(self, class_name: str) -> List[Member]:
         class_members = self.classes.get_class(class_name)
         return dialogs.user_input_request_selected_class_members(list(class_members.active_members))
@@ -216,6 +210,12 @@ class GithubSubCommand(ClassroomUtilsBaseCommand):
         logm.debug("GITHUB_TOKEN = '%s'", self.get_printable_token(github_token))
 
         return GithubCredentials(github_username, github_token)
+
+    def get_repo_prefix_from_user(self, args: argparse.Namespace) -> str | None:
+        return args.repo_prefix if hasattr(args, "repo_prefix") and args.repo_prefix else dialogs.user_input_request_optional_repo_prefix()
+
+    def get_template_from_user(self, args: argparse.Namespace) -> str | None:
+        return args.template if hasattr(args, "template") and args.template else dialogs.user_input_request_optional_template_repo_name(self.github_ops)
 
     def get_org_name_from_user(self, args: argparse.Namespace) -> str:
         return args.org_name if hasattr(args, "org_name") and args.org_name else dialogs.user_input_request_org_name(self.github_ops)

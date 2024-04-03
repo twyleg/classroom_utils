@@ -65,3 +65,40 @@ def user_input_request_selected_class_members(class_members: List[Member]) -> Li
             selected_class_members.append(class_member)
 
     return selected_class_members
+
+
+def user_input_request_optional_repo_prefix() -> str | None:
+    yes = inquirer.confirm(message="Specify repo prefix?", default=False).execute()
+
+    if not yes:
+        return None
+
+    prefix = inquirer.text(
+        message="Repo prefix to use:",
+        multicolumn_complete=True,
+    ).execute()
+
+    return prefix.rstrip("_")
+
+
+def user_input_request_optional_template_repo_name(github_ops: github_operations.GithubOperations) -> str | None:
+    yes = inquirer.confirm(message="Specify repo template?", default=False).execute()
+
+    if not yes:
+        return None
+
+    available_orgs = github_ops.get_org_names()
+    logm.debug("Available orgs: %s",available_orgs)
+    org_name = inquirer.fuzzy(
+        message="Select org of template:",
+        choices=available_orgs,
+        border=True
+    ).execute()
+
+    full_repo_names_of_org = github_ops.get_full_repo_names_by_org(org_name)
+    logm.debug("Choose repos in org '%s': %s",org_name, full_repo_names_of_org)
+    return inquirer.fuzzy(
+        message="Select a template repo:",
+        choices=full_repo_names_of_org,
+        border=True
+    ).execute()
