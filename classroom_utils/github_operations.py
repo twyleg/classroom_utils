@@ -113,6 +113,13 @@ class GithubOperations:
     def get_repo(self, full_repo_name: str) -> github.Repository.Repository:
         return self.github_connection.get_repo(full_repo_name)
 
+    def is_repo_existing(self, full_repo_name: str) -> bool:
+        try:
+            self.github_connection.get_repo(full_repo_name)
+            return True
+        except github.GithubException:
+            return False
+
     @staticmethod
     def get_branch_by_name(repo: github.Repository.Repository, name: str) -> github.Branch.Branch | None:
         for branch in repo.get_branches():
@@ -140,6 +147,14 @@ class GithubOperations:
                     logm.debug("  - Remove invitation!")
                     repo.remove_invitation(invitation.id)
             bar()
+
+    @staticmethod
+    def is_invitation_for_user_pending(repo: github.Repository, user: github.NamedUser) -> bool:
+        pending_invitations = repo.get_pending_invitations()
+        for pending_invitation in pending_invitations:
+            if pending_invitation.invitee == user:
+                return True
+        return False
 
     def clone_repo(self, clone_url: str, target_dir) -> None:
 
@@ -179,15 +194,18 @@ class GithubOperations:
                 logm.error("Repo '%s' is not a template! Unable to create personal class repos!", template_repo.name)
                 sys.exit(-1)
 
-        with alive_bar(len(selected_class.members), title="Granting access:", enrich_print=False) as bar:
+        with alive_bar(len(selected_class.members), title="Creating personal repo:", enrich_print=False) as bar:
             for class_member in selected_class.active_members:
                 repo_name = class_member.generate_personal_repo_name(repo_prefix)
-                if template_repo:
+                full_repo_name = f"{org_name}/{repo_name}"
+                if self.is_repo_existing(full_repo_name):
+                    logm.warning("Personal class repo '%s' already existing. Nothing todo!", full_repo_name)
+                elif template_repo:
                     org.create_repo_from_template(repo_name, template_repo, private=True)
-                    logm.info("Created personal class repo '%s' from template '%s'", repo_name, template_repo.full_name)
+                    logm.info("Created personal class repo '%s' from template '%s'", full_repo_name, template_repo.full_name)
                 else:
                     org.create_repo(repo_name, private=True, auto_init=True)
-                    logm.info("Created personal class repo '%s'", repo_name)
+                    logm.info("Created personal class repo '%s'", full_repo_name)
                 bar()
 
             for class_member in selected_class.inactive_members:
@@ -241,11 +259,10 @@ class GithubOperations:
                     logm.warning("Unable to create PR! Base branch '%s' and head branch '%s' are equal.",
                                     base_branch.name, head_branch.name)
                     continue
-
                 try:
                     repo.create_pull(review_branch_name, head_branch_name, title=pr_title)
                     logm.info("Created pullrequest '%s' <- '%s' in repository '%s'", review_branch_name,
-                                 head_branch_name, repo.name)
+                              head_branch_name, repo.name)
                 except github.GithubException as e:
                     logm.error("Create pullrequest failed with message: '$s'", e.message)
             bar()
@@ -263,9 +280,13 @@ class GithubOperations:
                 class_member_named_user = self.get_named_user(class_member.github_username)
 
                 repo = org.get_repo(repo_name)
-                repo.add_to_collaborators(class_member_named_user, permission=permission)
-                logm.info("Granted access to personal class repo for '%s' -> '%s, permission: '%s'", class_member, repo_name,
-                             permission)
+
+                if self.is_invitation_for_user_pending(repo, class_member_named_user):
+                    logm.info("Invitation for '%s' -> '%s' already pending. Nothing todo!", class_member, repo.full_name)
+                else:
+                    repo.add_to_collaborators(class_member_named_user, permission=permission)
+                    logm.info("Granted access to personal class repo for '%s' -> '%s, permission: '%s'", class_member,
+                              repo.full_name, permission)
                 bar()
 
     def revoke_access_from_personal_class_repos_in_org(self, org_name: str, selected_class_members: List[Member],) -> None:
