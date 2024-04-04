@@ -296,7 +296,7 @@ class GithubOrgInitSubCommand(GithubOrgSubCommand):
         logm.debug("\t-repo_prefix=%s", repo_prefix)
         logm.debug("\t-template=%s", template)
 
-        self.github_ops.create_personal_class_repos_in_org(org_name, class_name, repo_prefix, template)
+        self.github_ops.org_create_personal_repos(org_name, class_name, repo_prefix, template)
 
 
 class GithubOrgCloneSubCommand(GithubOrgSubCommand):
@@ -360,7 +360,7 @@ class GithubOrgAccessGrantSubCommand(GithubOrgInitSubCommand):
         logm.debug("\t-selected_class_members%s", selected_class_members)
         logm.debug("\t-permission=%s", permission)
 
-        self.github_ops.grant_access_to_personal_class_repos_in_org(org_name, selected_class_members, permission)
+        self.github_ops.org_access_grant_personal_repos(org_name, selected_class_members, permission)
 
 
 class GithubOrgAccessRevokeSubCommand(GithubOrgInitSubCommand):
@@ -378,7 +378,7 @@ class GithubOrgAccessRevokeSubCommand(GithubOrgInitSubCommand):
         logm.debug("\t-class_name=%s", class_name)
         logm.debug("\t-selected_class_members%s", selected_class_members)
 
-        self.github_ops.revoke_access_from_personal_class_repos_in_org(org_name, selected_class_members)
+        self.github_ops.org_access_revoke_personal_repos(org_name, selected_class_members)
 
 
 class GithubOrgReviewCreateSubCommand(GithubOrgInitSubCommand):
@@ -411,7 +411,7 @@ class GithubOrgReviewCreateSubCommand(GithubOrgInitSubCommand):
         logm.debug("\thead_branch=%s", head_branch_name)
         logm.debug("\treview_branch=%s", review_branch_name)
 
-        self.github_ops.create_reviews_for_repos_in_org(org_name, class_name, head_branch_name, review_branch_name)
+        self.github_ops.org_reviews_create(org_name, class_name, head_branch_name, review_branch_name)
 
 
 class GithubOrgReviewStatusSubCommand(GithubOrgSubCommand):
@@ -475,7 +475,7 @@ class GithubRepoAccessGrantSubCommand(GithubRepoSubCommand):
         logm.debug("\t-selected_class_members=%s", selected_class_members)
         logm.debug("\t-permission=%s", permission)
 
-        self.github_ops.grant_class_access_to_repo(repo_name, selected_class_members, permission)
+        self.github_ops.repo_access_grant_for_class(repo_name, selected_class_members, permission)
 
 
 class GithubRepoAccessRevokeSubCommand(GithubRepoSubCommand):
@@ -493,5 +493,5 @@ class GithubRepoAccessRevokeSubCommand(GithubRepoSubCommand):
         logm.debug("\t-class_name=%s", class_name)
         logm.debug("\t-selected_class_members=%s", selected_class_members)
 
-        self.github_ops.revoke_class_access_from_repo(repo_name, selected_class_members)
+        self.github_ops.repo_access_revoke_for_class(repo_name, selected_class_members)
 
