@@ -103,13 +103,13 @@ class GithubOperations:
 
         pending_invitations = repo.get_pending_invitations()
 
-        with alive_bar(pending_invitations.totalCount, title="Granting access:", enrich_print=False) as bar:
-            for invitation in pending_invitations:
-                logm.debug("  - Found invitation: '%s'", invitation.invitee.login)
-                if invitation.invitee.login == invitee.login:
-                    logm.debug("  - Remove invitation!")
-                    repo.remove_invitation(invitation.id)
-            bar()
+        for invitation in pending_invitations:
+            if invitation.invitee.login == invitee.login:
+                logm.debug("Found invitation: '%s'", invitation.invitee.login)
+                repo.remove_invitation(invitation.id)
+                return
+        logm.warning("Unable to find and remove invitation for '%s'", invitation.invitee.login)
+
 
     @staticmethod
     def _repo_is_invitation_for_user_pending(repo: github.Repository, user: github.NamedUser) -> bool:
@@ -137,9 +137,10 @@ class GithubOperations:
         member_named_user = self._get_named_user(member.github_username)
         if repo.has_in_collaborators(member_named_user):
             logm.warning("User already a collaborator of repo '%s' -> '%s' already pending. Nothing todo!", member, repo.full_name)
-        elif self._repo_is_invitation_for_user_pending(repo, member_named_user):
-            logm.warning("Invitation already pending: '%s' -> '%s'. Nothing todo!", member, repo.full_name)
         else:
+            if self._repo_is_invitation_for_user_pending(repo, member_named_user):
+                logm.warning("Invitation already pending: '%s' -> '%s'. Inviting again!", member, repo.full_name)
+                self._repo_remove_invitation(repo, member_named_user)
             repo.add_to_collaborators(member_named_user, permission=permission)
             logm.info("Granted access to repo '%s' -> '%s', permission: '%s'", member, repo.full_name, permission)
 
