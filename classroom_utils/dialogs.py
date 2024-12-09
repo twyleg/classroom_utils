@@ -102,3 +102,16 @@ def user_input_request_optional_template_repo_name(github_ops: github_operations
         choices=full_repo_names_of_org,
         border=True
     ).execute()
+
+def user_input_request_head_branch_name() -> str | None:
+    return inquirer.text(
+        message="Head branch name:",
+        multicolumn_complete=True,
+    ).execute()
+
+def user_input_request_review_branch_name() -> str | None:
+    return inquirer.text(
+        message="Review branch name:",
+        multicolumn_complete=True,
+    ).execute()
+

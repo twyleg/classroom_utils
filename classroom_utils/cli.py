@@ -226,6 +226,12 @@ class GithubSubCommand(ClassroomUtilsBaseCommand):
     def get_permission_from_user(self, args: argparse.Namespace) -> str:
         return args.permission if hasattr(args, "permission") and args.permission else dialogs.user_input_request_repo_permission()
 
+    def get_head_branch_name_from_user(self, args: argparse.Namespace) -> str:
+        return args.permission if hasattr(args, "head_branch") and args.permission else dialogs.user_input_request_head_branch_name()
+
+    def get_review_branch_name_from_user(self, args: argparse.Namespace) -> str:
+        return args.permission if hasattr(args, "review_branch") and args.permission else dialogs.user_input_request_review_branch_name()
+
     def handle(self, args: argparse.Namespace) -> None:
         self.prepare_handler(args)
         logm.debug("github:")
@@ -402,8 +408,8 @@ class GithubOrgReviewCreateSubCommand(GithubOrgInitSubCommand):
         self.prepare_handler(args)
         org_name = self.get_org_name_from_user(args)
         class_name = self.get_class_name_from_user(args)
-        head_branch_name = args.head_branch
-        review_branch_name = args.review_branch
+        head_branch_name = self.get_head_branch_name_from_user(args)
+        review_branch_name = self.get_review_branch_name_from_user(args)
 
         logm.debug(f"github org review create:")
         logm.debug("\torg_name=%s", org_name)
